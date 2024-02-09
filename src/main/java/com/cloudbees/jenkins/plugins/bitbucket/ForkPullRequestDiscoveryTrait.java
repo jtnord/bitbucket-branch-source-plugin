@@ -301,7 +301,16 @@ public class ForkPullRequestDiscoveryTrait extends SCMSourceTrait {
         @Override
         protected boolean checkTrusted(@NonNull BitbucketSCMSourceRequest request, @NonNull PullRequestSCMHead head)
                 throws IOException, InterruptedException {
-            if (!head.getOrigin().equals(SCMHeadOrigin.DEFAULT)) {
+            SCMHeadOrigin origin = head.getOrigin();
+            if (!origin.equals(SCMHeadOrigin.DEFAULT)) {
+                if(origin instanceof SCMHeadOrigin.Fork) {
+                    String forkOwner = ((SCMHeadOrigin.Fork) origin).getName();
+                    int index = forkOwner.lastIndexOf('/');
+                    if (index > 0) { //hasn't happened yet in my testing, so this might be wrong
+                        forkOwner = forkOwner.substring(0, index);
+                    }
+                    return request.getRepoOwner().equalsIgnoreCase(forkOwner);
+                }
                 return head.getRepoOwner().equalsIgnoreCase(request.getRepoOwner());
             }
             return false;
