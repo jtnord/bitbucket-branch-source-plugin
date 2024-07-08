@@ -6,9 +6,11 @@ import com.cloudbees.jenkins.plugins.bitbucket.endpoints.BitbucketCloudEndpoint;
 import com.cloudbees.plugins.credentials.Credentials;
 import com.cloudbees.plugins.credentials.CredentialsMatchers;
 import com.cloudbees.plugins.credentials.CredentialsScope;
+import com.cloudbees.plugins.credentials.SecretBytes;
 import com.cloudbees.plugins.credentials.impl.CertificateCredentialsImpl;
 import com.cloudbees.plugins.credentials.impl.UsernamePasswordCredentialsImpl;
-import edu.umd.cs.findbugs.annotations.NonNull;
+import java.io.ByteArrayOutputStream;
+import java.security.KeyStore;
 import java.util.Collections;
 import java.util.List;
 import jenkins.authentication.tokens.api.AuthenticationTokenContext;
@@ -57,7 +59,7 @@ public class BitbucketAuthenticatorTest {
     }
 
     @Test
-    public void passwordCredentialsTest() {
+    public void passwordCredentialsTest() throws Exception {
         List<Credentials> list = Collections.<Credentials>singletonList(new UsernamePasswordCredentialsImpl(
                         CredentialsScope.SYSTEM, "dummy", "dummy", "user", "pass"));
         AuthenticationTokenContext ctx = BitbucketAuthenticator.authenticationContext((null));
@@ -69,9 +71,9 @@ public class BitbucketAuthenticatorTest {
     }
 
     @Test
-    public void certCredentialsTest() {
+    public void certCredentialsTest() throws Exception {
         List<Credentials> list = Collections.<Credentials>singletonList(new CertificateCredentialsImpl(
-                CredentialsScope.SYSTEM, "dummy", "dummy", "password", new DummyKeyStoreSource()));
+                CredentialsScope.SYSTEM, "dummy", "dummy", "password", new DummyKeyStoreSource("password")));
 
         AuthenticationTokenContext ctx = BitbucketAuthenticator.authenticationContext(null);
         Credentials c = CredentialsMatchers.firstOrNull(list, AuthenticationTokens.matcher(ctx));
@@ -87,15 +89,20 @@ public class BitbucketAuthenticatorTest {
         assertThat(AuthenticationTokens.convert(ctx, c), notNullValue());
     }
 
-    private static class DummyKeyStoreSource extends CertificateCredentialsImpl.KeyStoreSource {
-        @NonNull
-        @Override
-        public byte[] getKeyStoreBytes() { return new byte[0]; }
+    private static class DummyKeyStoreSource extends CertificateCredentialsImpl.UploadedKeyStoreSource {
 
-        @Override
-        public long getKeyStoreLastModified() { return 0; }
+        DummyKeyStoreSource(String password) throws Exception {
+            super(null, dummyPKCS12Store(password));
+        }
 
-        @Override
-        public boolean isSnapshotSource() { return true; }
+        private static SecretBytes dummyPKCS12Store(String password) throws Exception {
+            KeyStore ks = KeyStore.getInstance("PKCS12");
+            ks.load(null, password.toCharArray());
+            ByteArrayOutputStream bos = new ByteArrayOutputStream();
+            ks.store(bos, password.toCharArray());
+            return SecretBytes.fromBytes(bos.toByteArray());
+        }
+
     }
+
 }
