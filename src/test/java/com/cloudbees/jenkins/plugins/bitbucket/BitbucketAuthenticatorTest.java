@@ -13,6 +13,7 @@ import java.io.ByteArrayOutputStream;
 import java.security.KeyStore;
 import java.util.Collections;
 import java.util.List;
+import java.util.UUID;
 import jenkins.authentication.tokens.api.AuthenticationTokenContext;
 import jenkins.authentication.tokens.api.AuthenticationTokens;
 import org.junit.ClassRule;
@@ -72,8 +73,10 @@ public class BitbucketAuthenticatorTest {
 
     @Test
     public void certCredentialsTest() throws Exception {
+        // random password in test code to keep code-ql happy 🤮
+        String password = UUID.randomUUID().toString();
         List<Credentials> list = Collections.<Credentials>singletonList(new CertificateCredentialsImpl(
-                CredentialsScope.SYSTEM, "dummy", "dummy", "password", new DummyKeyStoreSource("password")));
+                CredentialsScope.SYSTEM, "dummy", "dummy", password, new DummyKeyStoreSource(password)));
 
         AuthenticationTokenContext ctx = BitbucketAuthenticator.authenticationContext(null);
         Credentials c = CredentialsMatchers.firstOrNull(list, AuthenticationTokens.matcher(ctx));
